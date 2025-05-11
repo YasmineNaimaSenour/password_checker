@@ -70,9 +70,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Length bonus for longer passwords
-    if (password.length > 12) {
-      strength += (password.length - 12) * 2;
-    }
+    // if (password.length > 12) {
+    //   strength += (password.length - 12) * 2;
+    // }
     
     return Math.max(0, Math.min(100, strength));
   }
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateRuleIcons(password) {
     // Check each rule and update the icon
     // Length rule
-    updateRuleIcon(ruleLength, password.length >= 8);
+    updateRuleIcon(ruleLength, password.length >= 12);
     
     // Uppercase rule
     updateRuleIcon(ruleUppercase, /[A-Z]/.test(password));

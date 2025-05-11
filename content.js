@@ -22,11 +22,11 @@ function createPasswordStrengthPanel(passwordInput) {
     <div class="strength-meter" style="height: 8px; border-radius: 4px; background-color: #E5E7EB; margin: 8px 0; overflow: hidden;">
       <div class="strength-progress" style="height: 100%; width: 0%; border-radius: 4px; transition: width 0.3s ease, background-color 0.3s ease;"></div>
     </div>
-    <p class="strength-text" style="font-size: 14px; font-weight: 500; margin: 0;">Password strength: <span class="strength-value">None</span></p>
-    <div class="password-rules" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+    <p class="strength-text" style="font-size: 14px; font-weight: 500; margin: 5px 0 12px 0; padding: 4px 0;">Password strength: <span class="strength-value">None</span></p>
+    <div class="password-rules" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px; clear: both;">
       <div id="ruleLength" class="rule-item" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6B7280;">
         <span class="rule-icon" style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">❌</span>
-        <span class="text">At least 8 characters</span>
+        <span class="text">At least 12 characters</span>
       </div>
       <div id="ruleUppercase" class="rule-item" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6B7280;">
         <span class="rule-icon" style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">❌</span>
@@ -43,10 +43,6 @@ function createPasswordStrengthPanel(passwordInput) {
       <div id="ruleSpecial" class="rule-item" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6B7280;">
         <span class="rule-icon" style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">❌</span>
         <span class="text">Contains special character</span>
-      </div>
-      <div id="ruleDictionary" class="rule-item" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6B7280;">
-        <span class="rule-icon" style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">❌</span>
-        <span class="text">Not a common password</span>
       </div>
     </div>
     <div class="cracking-info" style="margin-top: 12px; padding: 12px; border-radius: 8px; background-color: #F3F4F6;">
@@ -109,9 +105,9 @@ function calculatePasswordStrength(password) {
     }
   }
   
-  if (password.length > 12) {
-    strength += (password.length - 12) * 2;
-  }
+  // if (password.length > 12) {
+  //   strength += (password.length - 12) * 2;
+  // }
   
   return Math.max(0, Math.min(100, strength));
 }
@@ -119,38 +115,51 @@ function calculatePasswordStrength(password) {
 // Update strength meter
 function updateStrengthMeter(strength, panel) {
   const progress = panel.querySelector('.strength-progress');
-  const text = panel.querySelector('.strength-text');
+  const strengthValueSpan = panel.querySelector('.strength-value');
+  const strengthTextElement = panel.querySelector('.strength-text');
   
-  if (!progress || !text) return;
+  if (!progress || !strengthValueSpan) return;
   
   progress.style.width = strength + '%';
   
+  let strengthText = 'None';
   progress.className = 'strength-progress';
-  text.className = 'strength-text';
   
-  if (strength < 25) {
-    progress.classList.add('progress-weak');
-    text.classList.add('strength-weak');
-    text.textContent = 'Weak';
-  } else if (strength < 50) {
-    progress.classList.add('progress-fair');
-    text.classList.add('strength-fair');
-    text.textContent = 'Fair';
-  } else if (strength < 75) {
-    progress.classList.add('progress-good');
-    text.classList.add('strength-good');
-    text.textContent = 'Good';
-  } else {
-    progress.classList.add('progress-strong');
-    text.classList.add('strength-strong');
-    text.textContent = 'Strong';
+  // Ensure the strength text is visible and properly positioned
+  if (strengthTextElement) {
+    strengthTextElement.style.display = 'block';
+    strengthTextElement.style.position = 'relative';
+    strengthTextElement.style.zIndex = '1';
+    strengthTextElement.style.color = '#111827'; // Set the "Password strength:" text to black
   }
+  
+  // Set different colors based on strength
+  if (strength < 25) {
+    progress.style.backgroundColor = '#EF4444'; // Red
+    strengthText = 'Weak';
+    strengthValueSpan.style.color = '#EF4444'; // Red for weak
+  } else if (strength < 50) {
+    progress.style.backgroundColor = '#F59E0B'; // Amber
+    strengthText = 'Fair';
+    strengthValueSpan.style.color = '#EAB308'; // Yellow for fair
+  } else if (strength < 75) {
+    progress.style.backgroundColor = '#10B981'; // Green
+    strengthText = 'Good';
+    strengthValueSpan.style.color = '#10B981'; // Green for good
+  } else {
+    progress.style.backgroundColor = '#059669'; // Dark green
+    strengthText = 'Strong';
+    strengthValueSpan.style.color = '#047857'; // Darker green for strong
+  }
+  
+  // Update only the value span, not the entire text
+  strengthValueSpan.textContent = strengthText;
 }
 
 // Update rule icons
 function updateRuleIcons(password, panel) {
   const rules = {
-    ruleLength: password.length >= 8,
+    ruleLength: password.length >= 12,
     ruleUppercase: /[A-Z]/.test(password),
     ruleLowercase: /[a-z]/.test(password),
     ruleNumber: /[0-9]/.test(password),
@@ -164,8 +173,7 @@ function updateRuleIcons(password, panel) {
       const icon = element.querySelector('.rule-icon');
       if (icon) {
         icon.textContent = isPassed ? '✅' : '❌';
-        element.classList.remove(isPassed ? 'rule-failed' : 'rule-passed');
-        element.classList.add(isPassed ? 'rule-passed' : 'rule-failed');
+        element.style.color = isPassed ? '#10B981' : '#6B7280';
       }
     }
   }
@@ -177,11 +185,33 @@ function updateCrackingTime(password, panel) {
   if (!crackingTimeElement) return;
 
   const result = estimateCrackingTime(password);
-  crackingTimeElement.textContent = `Estimated cracking time: ${result.time}`;
+  crackingTimeElement.textContent = result.time;
   
-  crackingTimeElement.className = 'cracking-time';
-  if (result.vulnerable) {
-    crackingTimeElement.classList.add('vulnerable');
+  crackingTimeElement.style.color = result.vulnerable ? '#EF4444' : '#10B981';
+}
+
+// Function to check if password is common (placeholder - you'll need to implement this)
+function isCommonPassword(password) {
+  // This would ideally check against a database of common passwords
+  const commonPasswords = ['password', '123456', 'qwerty', 'admin', 'welcome', 'password123'];
+  return commonPasswords.includes(password.toLowerCase());
+}
+
+// Function to estimate password cracking time (placeholder - you'll need to implement this)
+function estimateCrackingTime(password) {
+  // This is a simplified estimation
+  if (!password) return { time: 'Instantly', vulnerable: true };
+  
+  const strength = calculatePasswordStrength(password);
+  
+  if (strength < 25) {
+    return { time: 'Instantly', vulnerable: true };
+  } else if (strength < 50) {
+    return { time: 'A few hours to days', vulnerable: true };
+  } else if (strength < 75) {
+    return { time: 'A few months to years', vulnerable: false };
+  } else {
+    return { time: 'Centuries', vulnerable: false };
   }
 }
 
@@ -204,6 +234,7 @@ async function initializePasswordStrengthCheck() {
       const rect = input.getBoundingClientRect();
       panel.style.top = `${rect.bottom + window.scrollY + 5}px`;
       panel.style.left = `${rect.left + window.scrollX}px`;
+      panel.style.width = `${rect.width}px`;
     }
     
     // Debounced update function
@@ -265,4 +296,4 @@ formElements.forEach(element => {
     childList: true,
     subtree: true
   });
-}); 
+});
