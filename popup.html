@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength Checker</title>
+  <style>
+    :root {
+      --primary-color: #5D5FEF;
+      --success-color: #10B981;
+      --warning-color: #F59E0B;
+      --danger-color: #EF4444;
+      --bg-color: #F9FAFB;
+      --text-color: #111827;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      color: var(--primary-color);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #6B7280;
+      margin: 0 0 8px 0;
+    }
+
+    .password-input {
+      position: relative;
+      width: 100%;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(93, 95, 239, 0.2);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #6B7280;
+    }
+
+    .strength-meter {
+      height: 8px;
+      border-radius: 4px;
+      background-color: #E5E7EB;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+
+    .strength-progress {
+      height: 100%;
+      width: 0%;
+      border-radius: 4px;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    .password-rules {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #6B7280;
+    }
+
+    .rule-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .rule-passed {
+      color: var(--success-color);
+    }
+
+    .rule-failed {
+      color: #9CA3AF;
+    }
+
+    .strength-text {
+      font-size: 14px;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .strength-weak { color: var(--danger-color); }
+    .strength-fair { color: var(--warning-color); }
+    .strength-good { color: #3B82F6; }
+    .strength-strong { color: var(--success-color); }
+
+    /* For the progress bar */
+    .progress-weak { background-color: var(--danger-color); }
+    .progress-fair { background-color: var(--warning-color); }
+    .progress-good { background-color: #3B82F6; }
+    .progress-strong { background-color: var(--success-color); }
+    
+    /* Cracking time section */
+    .cracking-info {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background-color: #F3F4F6;
+    }
+    
+    .cracking-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin: 0 0 8px 0;
+    }
+    
+    .cracking-time {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--success-color);
+    }
+    
+    .cracking-time.vulnerable {
+      color: var(--danger-color);
+    }
+    
+    .close-button {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #6B7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="close-button" id="closeButton">&times;</button>
+    
+    <header>
+      <h1>Password Strength Checker</h1>
+      <p class="subtitle">Test the security of your password</p>
+    </header>
+
+    <div class="password-input">
+      <input type="password" id="password" placeholder="Enter your password" autocomplete="off">
+      <button class="toggle-password" id="togglePassword">
+        👁️
+      </button>
+    </div>
+
+    <div class="strength-meter">
+      <div class="strength-progress" id="strengthProgress"></div>
+    </div>
+    
+    <p class="strength-text">Password strength: <span id="strengthValue">None</span></p>
+    
+    <div class="cracking-info">
+      <p class="cracking-title">Estimated time to crack:</p>
+      <p class="cracking-time" id="crackingTime">Not entered</p>
+    </div>
+    
+    <div class="password-rules">
+      <div class="rule-item">
+        <span class="rule-icon" id="ruleLength">❌</span>
+        <span>At least 8 characters long</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon" id="ruleUppercase">❌</span>
+        <span>Contains uppercase letters</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon" id="ruleLowercase">❌</span>
+        <span>Contains lowercase letters</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon" id="ruleNumber">❌</span>
+        <span>Contains numbers</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon" id="ruleSpecial">❌</span>
+        <span>Contains special characters</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon" id="ruleDictionary">❌</span>
+        <span>Not a common password</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="estimated_cracking_time.js"></script>
+  <script src="popup.js"></script>
+  
+  <script>
+    // Additional script for close button functionality
+    document.getElementById('closeButton').addEventListener('click', function() {
+      window.parent.postMessage({ action: 'close' }, '*');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 12px;
+      color: #333;
+      overflow: hidden;
+    }
+    
+    h4 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #555;
+    }
+    
+    .strength-container {
+      width: 100%;
+      height: 8px;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    
+    .strength-progress {
+      height: 100%;
+      width: 0;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-weak { background-color: #ff4d4d; }
+    .progress-fair { background-color: #ffa64d; }
+    .progress-good { background-color: #4dcd5a; }
+    .progress-strong { background-color: #37a644; }
+    
+    .strength-value {
+      text-align: left;
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    
+    .strength-weak { color: #ff4d4d; }
+    .strength-fair { color: #ffa64d; }
+    .strength-good { color: #4dcd5a; }
+    .strength-strong { color: #37a644; }
+    
+    .rules-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 12px;
+    }
+    
+    .rule {
+      display: flex;
+      align-items: center;
+    }
+    
+    .rule-passed { color: #37a644; }
+    .rule-failed { color: #999; }
+    
+    .cracking-time {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #555;
+    }
+    
+    .vulnerable {
+      color: #ff4d4d;
+    }
+    
+    #debugInfo {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      font-size: 9px;
+      color: #aaa;
+      /*display: none; */
+    }
+  </style>
+</head>
+<body>
+  <h4>Password Strength</h4>
+  
+  <div class="strength-container">
+    <div id="strengthProgress" class="strength-progress"></div>
+  </div>
+  
+  <div id="strengthValue" class="strength-value">No Password</div>
+  
+  <div class="rules-container">
+    <div class="rule">
+      <span id="ruleLength" class="rule-failed">❌</span>
+      <span>&nbsp;At least 8 characters</span>
+    </div>
+    <div class="rule">
+      <span id="ruleUppercase" class="rule-failed">❌</span>
+      <span>&nbsp;Uppercase letter</span>
+    </div>
+    <div class="rule">
+      <span id="ruleLowercase" class="rule-failed">❌</span>
+      <span>&nbsp;Lowercase letter</span>
+    </div>
+    <div class="rule">
+      <span id="ruleNumber" class="rule-failed">❌</span>
+      <span>&nbsp;Number</span>
+    </div>
+    <div class="rule">
+      <span id="ruleSpecial" class="rule-failed">❌</span>
+      <span>&nbsp;Special character</span>
+    </div>
+    <div class="rule">
+      <span id="ruleDictionary" class="rule-failed">❌</span>
+      <span>&nbsp;Not common password</span>
+    </div>
+  </div>
+  
+  <div id="crackingTime" class="cracking-time">
+    Time to crack: Instantly
+  </div>
+  
+  <div id="debugInfo">Waiting for input...</div>
+
+  <script>
+    // Debugging helper
+    function debug(message) {
+      const debugInfo = document.getElementById('debugInfo');
+      debugInfo.textContent = message;
+      
+      // Also send to parent for console logging
+      try {
+        window.parent.postMessage({
+          action: 'debug',
+          message: message
+        }, '*');
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+  
+    // Simplified password strength functions
+    function calculatePasswordStrength(password) {
+      if (!password) return 0;
+      
+      let strength = 0;
+      
+      // Length check (up to 36 points)
+      strength += Math.min(36, password.length * 3);
+      
+      // Character variety checks (up to 60 points)
+      if (/[A-Z]/.test(password)) strength += 16; // uppercase
+      if (/[a-z]/.test(password)) strength += 16; // lowercase
+      if (/[0-9]/.test(password)) strength += 16; // numbers
+      if (/[^A-Za-z0-9]/.test(password)) strength += 16; // special chars
+      
+      // Check for common patterns
+      if (/123|abc|qwerty|password|admin|welcome/i.test(password)) {
+        strength -= 20;
+      }
+      
+      // Decrease for repeated characters
+      if (/(.)\1\1/.test(password)) {
+        strength -= 10;
+      }
+      
+      // Decrease for sequential characters
+      if (/(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)/i.test(password)) {
+        strength -= 10;
+      }
+      
+      // Length bonus for longer passwords
+      if (password.length > 12) {
+        strength += (password.length - 12) * 2;
+      }
+      
+      return Math.max(0, Math.min(100, strength));
+    }
+
+    function updateStrengthMeter(strength) {
+      const strengthProgress = document.getElementById('strengthProgress');
+      const strengthText = document.getElementById('strengthValue');
+      
+      // Update the progress bar width
+      strengthProgress.style.width = strength + '%';
+      
+      // Remove all previous classes
+      strengthProgress.className = 'strength-progress';
+      strengthText.className = 'strength-value';
+      
+      // Add appropriate class based on strength
+      if (strength < 25) {
+        strengthProgress.classList.add('progress-weak');
+        strengthText.classList.add('strength-weak');
+        strengthText.textContent = 'Weak';
+      } else if (strength < 50) {
+        strengthProgress.classList.add('progress-fair');
+        strengthText.classList.add('strength-fair');
+        strengthText.textContent = 'Fair';
+      } else if (strength < 75) {
+        strengthProgress.classList.add('progress-good');
+        strengthText.classList.add('strength-good');
+        strengthText.textContent = 'Good';
+      } else {
+        strengthProgress.classList.add('progress-strong');
+        strengthText.classList.add('strength-strong');
+        strengthText.textContent = 'Strong';
+      }
+    }
+
+    function updateRuleIcon(element, isPassed) {
+      if (!element) return;
+      
+      element.textContent = isPassed ? '✅' : '❌';
+      element.classList.remove(isPassed ? 'rule-failed' : 'rule-passed');
+      element.classList.add(isPassed ? 'rule-passed' : 'rule-failed');
+    }
+
+    function updateRuleIcons(password) {
+      // Check each rule and update the icon
+      const ruleLength = document.getElementById('ruleLength');
+      const ruleUppercase = document.getElementById('ruleUppercase');
+      const ruleLowercase = document.getElementById('ruleLowercase');
+      const ruleNumber = document.getElementById('ruleNumber');
+      const ruleSpecial = document.getElementById('ruleSpecial');
+      const ruleDictionary = document.getElementById('ruleDictionary');
+      
+      // Length rule
+      updateRuleIcon(ruleLength, password.length >= 8);
+      
+      // Uppercase rule
+      updateRuleIcon(ruleUppercase, /[A-Z]/.test(password));
+      
+      // Lowercase rule
+      updateRuleIcon(ruleLowercase, /[a-z]/.test(password));
+      
+      // Number rule
+      updateRuleIcon(ruleNumber, /[0-9]/.test(password));
+      
+      // Special character rule
+      updateRuleIcon(ruleSpecial, /[^A-Za-z0-9]/.test(password));
+      
+      // Dictionary word rule
+      const isDictionaryPassword = /123|abc|qwerty|password|admin|welcome/i.test(password);
+      updateRuleIcon(ruleDictionary, !isDictionaryPassword);
+    }
+
+    function simplifiedCrackingTimeEstimate(password) {
+      if (!password) return { time: 'Instantly', vulnerable: true };
+      
+      let charactersInSet = 0;
+      if (/[a-z]/.test(password)) charactersInSet += 26;
+      if (/[A-Z]/.test(password)) charactersInSet += 26;
+      if (/[0-9]/.test(password)) charactersInSet += 10;
+      if (/[^A-Za-z0-9]/.test(password)) charactersInSet += 33;
+      
+      // If no character sets are used
+      if (charactersInSet === 0) {
+        return { time: 'Instantly', vulnerable: true };
+      }
+      
+      const combinations = Math.pow(charactersInSet, password.length);
+      const guessesPerSecond = 1000000000; // 1 billion
+      const seconds = combinations / guessesPerSecond;
+      
+      let timeString;
+      let vulnerable = true;
+      
+      if (seconds < 1) timeString = 'Instantly';
+      else if (seconds < 60) timeString = Math.round(seconds) + ' seconds';
+      else if (seconds < 3600) timeString = Math.round(seconds / 60) + ' minutes';
+      else if (seconds < 86400) timeString = Math.round(seconds / 3600) + ' hours';
+      else if (seconds < 2592000) {
+        timeString = Math.round(seconds / 86400) + ' days';
+        vulnerable = false;
+      }
+      else if (seconds < 31536000) {
+        timeString = Math.round(seconds / 2592000) + ' months';
+        vulnerable = false;
+      }
+      else {
+        timeString = Math.round(seconds / 31536000) + ' years';
+        vulnerable = false;
+      }
+      
+      return { time: timeString, vulnerable };
+    }
+
+    function updateCrackingTime(password) {
+      const crackingTimeElement = document.getElementById('crackingTime');
+      
+      const result = simplifiedCrackingTimeEstimate(password);
+      
+      crackingTimeElement.textContent = 'Time to crack: ' + result.time;
+      
+      // Update styling based on vulnerability
+      crackingTimeElement.className = 'cracking-time';
+      if (result.vulnerable) {
+        crackingTimeElement.classList.add('vulnerable');
+      }
+    }
+
+    function analyzePassword(password) {
+      debug('Analyzing password: ' + (password ? password.length + ' chars' : 'empty'));
+      
+      const strength = calculatePasswordStrength(password);
+      updateStrengthMeter(strength);
+      updateRuleIcons(password);
+      updateCrackingTime(password);
+    }
+
+    // Listen for messages from content script
+    window.addEventListener('message', function(event) {
+      debug('Message received: ' + event.data.action);
+      
+      if (event.data.action === 'updatePassword') {
+        const password = event.data.password || '';
+        analyzePassword(password);
+      }
+    });
+
+    // Notify content script that dropdown is ready
+    window.onload = function() {
+    debug('Dropdown loaded, notifying parent');
+    
+    // Try multiple times to ensure the message gets through
+    const notifyParent = () => {
+        try {
+        window.parent.postMessage({ action: 'popupReady' }, '*');
+        } catch (e) {
+        debug('Error notifying parent: ' + e.message);
+        }
+    };
+    
+    // Notify immediately
+    notifyParent();
+    
+    // And again after a short delay to be sure
+    setTimeout(notifyParent, 100);
+    setTimeout(notifyParent, 500);
+    };
+    
+    // This initial message helps with debugging
+    debug('Script initialized');
+  </script>
+</body>
+</html>
