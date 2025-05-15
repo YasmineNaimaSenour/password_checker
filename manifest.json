@@ -13,7 +13,8 @@
   },
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "https://api.pwnedpasswords.com/*"
   ],
   "content_scripts": [
     {
@@ -22,9 +23,6 @@
       "css": ["content.css"]
     }
   ],
-  "background": {
-    "scripts": ["background.js"]
-  },
   "web_accessible_resources": [
     "popup.html",
     "popup.js",
